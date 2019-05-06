@@ -260,7 +260,7 @@ public class PinyinHelper {
         StringBuilder resultPinyinStrBuf = new StringBuilder();
 
         char[] chars = str.toCharArray();
-
+        boolean r = false;
         for (int i = 0; i < chars.length; i++) {
             String result = null;//匹配到的最长的结果
             char ch = chars[i];
@@ -274,25 +274,34 @@ public class PinyinHelper {
                     if (currentTrie.getPinyin() != null) {
                         result = currentTrie.getPinyin();
                         success = current;
+                        current++;
                     }
                     currentTrie = currentTrie.getNextTire();
                 }
-                current++;
+                
                 if (current < chars.length)
                     ch = chars[current];
                 else
                     break;
             }
             while (currentTrie != null);
-
+            
             if (result == null) {//如果在前缀树中没有匹配到，那么它就不能转换为拼音，直接输出或者去掉
-                if (retain) resultPinyinStrBuf.append(chars[i]);
+                if (retain) {
+                    resultPinyinStrBuf.append(chars[i]);
+                    r = true;
+                }
             } else {
+                if(r){//非拼音字符结束时增加分隔符
+                    resultPinyinStrBuf.append(separate);
+                    r=false;
+                }
                 String[] pinyinStrArray = resource.parsePinyinString(result);
                 if (pinyinStrArray != null) {
                     for (int j = 0; j < pinyinStrArray.length; j++) {
                         resultPinyinStrBuf.append(PinyinFormatter.formatHanyuPinyin(pinyinStrArray[j], outputFormat));
-                        if (current < chars.length || (j < pinyinStrArray.length - 1 && i != success)) {//不是最后一个,(也不是拼音的最后一个,并且不是最后匹配成功的)
+                        //防止次尾部词组在词组前缀树中仅匹配一部分(没匹配全)导致的次尾部分隔符丢失
+                        if ((success+1) < chars.length || (j < pinyinStrArray.length - 1 && i != success)) {//不是最后一个
                             resultPinyinStrBuf.append(separate);
                         }
                         if (i == success)
